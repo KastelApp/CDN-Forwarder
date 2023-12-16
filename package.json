@@ -1,0 +1,20 @@
+{
+  "name": "cdn-forwarder",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy --env production",
+    "dev": "wrangler dev --env staging",
+    "start": "wrangler dev"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20230419.0",
+    "@types/mime-types": "^2.1.4",
+    "@types/node": "^20.8.8",
+    "typescript": "^5.0.4",
+    "wrangler": "^3.0.0"
+  },
+  "dependencies": {
+    "mime-types": "^2.1.35"
+  }
+}
