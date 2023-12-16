@@ -21,20 +21,24 @@ export default {
 			const signature = url.searchParams.get("s");
 			const id = url.pathname.split("/")[2];
 
-			if (!request.headers.get("Content-Type")?.includes("multipart/form-data")) {
-				return new Response("Bad Request (CT)", { status: 400 })
+			if (!key || !expiry || !signature || !id) {
+				return new Response("Bad Request", { status: 400 });
 			}
 
-			const form = await request.formData()
+			if (!request.headers.get("Content-Type")?.includes("multipart/form-data")) {
+				return new Response("Bad Request", { status: 400 });
+			}
+
+			const form = await request.formData();
 
 			if (!form.has("file")) {
-				return new Response("Bad Request (NF)", { status: 400 })
+				return new Response("Bad Request", { status: 400 });
 			}
 
-			const path = url.pathname.split("/")
+			const path = url.pathname.split("/");
 
 			if (path[1] !== "u") {
-				return new Response("Bad Request (NU)", { status: 400 })
+				return new Response("Bad Request", { status: 400 });
 			}
 
 			const presignedUrl = await fetch(`${env.URL}/guild/${id}/init?&k=${key}&ex=${expiry}&s=${signature}`, {
@@ -45,10 +49,14 @@ export default {
 				}
 			});
 
-			const Text = await presignedUrl.text()
+			const Text = await presignedUrl.text();
 
 			if (presignedUrl.status !== 200) {
-				return new Response(Text, { status: presignedUrl.status })
+				if (env.ENVIRONMENT === "staging") {
+					return new Response(Text, { status: presignedUrl.status });
+				} else {
+					return new Response("Internal Server Error", { status: 500 });
+				}
 			}
 
 			const { Url } = JSON.parse(Text);
@@ -62,14 +70,22 @@ export default {
 			});
 
 			if (upload.status !== 200) {
-				return new Response(await upload.text(), { status: upload.status })
+				if (env.ENVIRONMENT === "staging") {
+					return new Response(await upload.text(), { status: upload.status });
+				} else {
+					return new Response("Internal Server Error", { status: 500 });
+				}
 			}
 
-			return new Response("", { status: 201 })
-			
+			return new Response("", { status: 201 });
+
 		} else if (request.method === "GET") { // example: http://127.0.0.1:8787/123/123
 			const id = request.url.split("/")[3];
 			const filename = request.url.split("/")[4];
+
+			if (!id || !filename) {
+				return new Response("Bad Request", { status: 400 });
+			}
 
 			const presignedUrl = await fetch(`${env.URL}/guild/${id}/${filename}`, {
 				method: "GET",
@@ -79,12 +95,14 @@ export default {
 				}
 			});
 
-			const Text = await presignedUrl.text()
-
-			console.log(Text)
+			const Text = await presignedUrl.text();
 
 			if (presignedUrl.status !== 200) {
-				return new Response(Text, { status: presignedUrl.status })
+				if (env.ENVIRONMENT === "staging") {
+					return new Response(Text, { status: presignedUrl.status });
+				} else {
+					return new Response("Internal Server Error", { status: 500 });
+				}
 			}
 
 			const { Url, Type } = JSON.parse(Text);
@@ -94,14 +112,18 @@ export default {
 			});
 
 			if (upload.status !== 200) {
-				return new Response(await upload.text(), { status: upload.status })
+				if (env.ENVIRONMENT === "staging") {
+					return new Response(await upload.text(), { status: upload.status });
+				} else {
+					return new Response("Internal Server Error", { status: 500 });
+				}
 			}
 
 			// Unless its a image, or video we want to have the user download the file
 			const allowedImageFormats = ["png", "jpg", "jpeg", "gif", "webp"];
 			const allowedVideoFormats = ["mp4", "webm", "ogg"];
 
-			let extension = mime.extension(Type) 
+			let extension = mime.extension(Type);
 
 			extension ||= "txt";
 
@@ -114,7 +136,7 @@ export default {
 						"Content-Type": Type,
 						"Content-Disposition": `inline; filename="${filename}"`,
 					}
-				})
+				});
 			}
 
 			return new Response(await upload.arrayBuffer(), {
@@ -122,9 +144,9 @@ export default {
 					"Content-Type": Type,
 					"Content-Disposition": `attachment; filename="${filename}"`,
 				}
-			})
+			});
 		}
 
-		return new Response("Method not allowed", { status: 405 })
+		return new Response("Method not allowed", { status: 405 });
 	}
 };
