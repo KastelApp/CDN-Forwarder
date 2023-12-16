@@ -87,13 +87,23 @@ export default {
 				return new Response("Bad Request", { status: 400 });
 			}
 
-			const presignedUrl = await fetch(`${env.URL}/guild/${id}/${filename}`, {
+			let presignedUrl = await fetch(`${env.URL}/guild/${id}/${filename}`, {
 				method: "GET",
 				headers: {
 					"Authorization": `${env.SEC_KEY}`,
 					"Content-Type": "application/json"
 				}
 			});
+
+			if (presignedUrl.status === 209) { // 209 just means that the file pre-signed url was expired, but the file was still in cache when it shouldnt be
+				presignedUrl = await fetch(`${env.URL}/guild/${id}/${filename}`, {
+					method: "GET",
+					headers: {
+						"Authorization": `${env.SEC_KEY}`,
+						"Content-Type": "application/json"
+					}
+				});
+			}
 
 			const Text = await presignedUrl.text();
 
